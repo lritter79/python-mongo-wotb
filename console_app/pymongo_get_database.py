@@ -4,8 +4,8 @@ from pathlib import Path
 import os
 import sys
 from pydantic import BaseModel
-from beanie import Document, Indexed, init_beanie
-from typing import Optional
+from bunnet import Document, init_bunnet
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -21,12 +21,16 @@ class Address(BaseModel):
 
 class Show(Document):
     venueName: str
-    timezone: str
+    timezone: Optional[str] = "America/New York",
     fbLink: Optional[str] = None,
     address: Address
     startTime: datetime
     endTime: Optional[datetime] = None,
     entryTime: Optional[datetime] = None,
+    otherBands: Optional[List[str]] = []
+
+    class Settings:
+        name = "wotb_shows"
 
 
 def get_database():
@@ -39,6 +43,13 @@ def get_database():
         client = MongoClient(CONN_STRING)
         # Create the database for our example (we will use the same database throughout the tutorial
         print(client.list_database_names())
+        init_bunnet(database=client.wotb, document_models=[Show])
+        shows = Show.all().run()
+        for show in shows:
+            # This does not give a very readable output
+            print(show.venueName)
+            print("\n")
+
         return client['wotb']
     except pymongo_errors.ConfigurationError:
         print("An Invalid URI host error was received. Is your Atlas host name correct in your connection string?")
