@@ -62,10 +62,19 @@ async def get_most_recent_show():
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
         query = {"startTime": {"$lt": datetime.today()}}
-        shows = await Show.find(query).sort("-startTime").limit(1).run()
+        shows = await Show.find(query).sort("-startTime").limit(1).to_list()
         if shows.__len__() > 0:
             return shows[0]
         return None
+    return await mongo_client_wrapper(call_client)
+
+
+async def get_total_show_payout():
+    async def call_client(client):
+        await init_beanie(database=client.wotb, document_models=[Show])
+        query = {"payout": {"$exists": True, "$ne": None}}
+        payout = await Show.find(query).sum(Show.payout)
+        return payout
     return await mongo_client_wrapper(call_client)
 
 
@@ -75,4 +84,13 @@ async def get_average_show_payout():
         query = {"payout": {"$exists": True, "$ne": None}}
         payout = await Show.find(query).avg(Show.payout)
         return payout
+    return await mongo_client_wrapper(call_client)
+
+
+async def get_highest_show_payout():
+    async def call_client(client):
+        await init_beanie(database=client.wotb, document_models=[Show])
+        query = {"payout": {"$exists": True, "$ne": None}}
+        payout = await Show.find(query).sort("-payout").limit(1).to_list()
+        return payout[0].payout
     return await mongo_client_wrapper(call_client)

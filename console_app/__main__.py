@@ -1,4 +1,4 @@
-from mongo.utils import get_all_upcoming_shows, get_most_recent_show, get_next_show, get_average_show_payout
+from mongo.utils import get_all_upcoming_shows, get_highest_show_payout, get_most_recent_show, get_next_show, get_average_show_payout, get_total_show_payout
 import asyncio
 
 
@@ -16,7 +16,6 @@ async def main():
         print("4: Total Show Payout")
         print("5: Average Show Payout")
         print("6: Highest Show Payout")
-        print("7: Lowest Show Payout")
         print("q: Quit")
         user_input = input(
             "What would you like to know about Wake of the Blade?\n")
@@ -39,13 +38,26 @@ async def main():
                 print(f"Last Show: {show.venueName}")
             else:
                 print("No prior shows")
+        elif user_input == "4":
+            payout = await get_total_show_payout()
+            if payout != None:
+                print(f"All Payment: {payout}")
+            else:
+                print("No payout ever")
         elif user_input == "5":
             payout = await get_average_show_payout()
             if payout != None:
                 print(f"Avg Payout: {payout}")
             else:
                 print("No payout is typical")
-
+        elif user_input == "6":
+            payout = await get_highest_show_payout()
+            if payout != None:
+                print(f"Highest Payout: {payout}")
+            else:
+                print("None payout")
+        else:
+            print("Pick a valid option")
 
 if __name__ == "__main__":
     asyncio.run(main())
