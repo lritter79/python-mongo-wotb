@@ -1,3 +1,4 @@
+from pydantic import BaseModel, Field
 from pymongo import errors as pymongo_errors
 from dotenv import load_dotenv
 from pathlib import Path
@@ -53,7 +54,7 @@ async def get_all_upcoming_shows():
 async def get_all_shows():
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
-        shows = await Show.find_all().to_list()
+        shows = await Show.find(query=None).to_list()
         return shows
     return await mongo_client_wrapper(call_client)
 
@@ -62,11 +63,27 @@ async def get_most_recent_show():
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
         query = {"startTime": {"$lt": datetime.today()}}
-        shows = await Show.find(query).sort("-startTime").limit(1).to_list()
+        shows = await Show.find(query=query, sort=["-startTime"], limit=1).to_list()
         if shows.__len__() > 0:
             return shows[0]
         return None
     return await mongo_client_wrapper(call_client)
+
+
+async def get_highest_show_payout():
+    async def call_client(client):
+        await init_beanie(database=client.wotb, document_models=[Show])
+        query = {"payout": {"$exists": True, "$ne": None}}
+        payout = await Show.find(query).sort("-payout").limit(1).to_list()
+        return payout[0].payout
+    return await mongo_client_wrapper(call_client)
+
+# aggregate methods
+
+
+class OutputItem(BaseModel):
+    id: str = Field(None, alias="_id")
+    value: float
 
 
 async def get_total_show_payout():
@@ -82,15 +99,20 @@ async def get_average_show_payout():
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
         query = {"payout": {"$exists": True, "$ne": None}}
-        payout = await Show.find(query).avg(Show.payout)
-        return payout
+        payout = await Show.find(query).aggregate(
+            [{"$group": {"_id": {"$toString": "$_id"}, "value": {"$avg": "$payout"}}}],
+            projection_model=OutputItem
+        ).to_list()
+        return payout[0].value
     return await mongo_client_wrapper(call_client)
 
+# Intsert method
 
-async def get_highest_show_payout():
+
+async def add_show(**kwargs):
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
-        query = {"payout": {"$exists": True, "$ne": None}}
-        payout = await Show.find(query).sort("-payout").limit(1).to_list()
-        return payout[0].payout
+        show = Show(**kwargs)
+        doc = await Show.insert_one(show)
+        return doc
     return await mongo_client_wrapper(call_client)

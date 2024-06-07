@@ -1,5 +1,9 @@
-from mongo.utils import get_all_upcoming_shows, get_highest_show_payout, get_most_recent_show, get_next_show, get_average_show_payout, get_total_show_payout
+from datetime import datetime
+from classes.address import Address
+from utils.create_show_helper import create_show_with_input
+from mongo.utils import add_show, get_all_upcoming_shows, get_highest_show_payout, get_most_recent_show, get_next_show, get_average_show_payout, get_total_show_payout
 import asyncio
+from pytz import timezone
 
 
 async def main():
@@ -16,6 +20,7 @@ async def main():
         print("4: Total Show Payout")
         print("5: Average Show Payout")
         print("6: Highest Show Payout")
+        print("7: Add a show")
         print("q: Quit")
         user_input = input(
             "What would you like to know about Wake of the Blade?\n")
@@ -56,6 +61,8 @@ async def main():
                 print(f"Highest Payout: {payout}")
             else:
                 print("None payout")
+        elif user_input == "7":
+            await create_show_with_input()
         else:
             print("Pick a valid option")
 
