@@ -106,7 +106,7 @@ async def get_average_show_payout():
         return payout[0].value
     return await mongo_client_wrapper(call_client)
 
-# Intsert method
+# Insert method
 
 
 async def add_show(**kwargs):
@@ -115,4 +115,27 @@ async def add_show(**kwargs):
         show = Show(**kwargs)
         doc = await Show.insert_one(show)
         return doc
+    return await mongo_client_wrapper(call_client)
+
+# Modular methods
+
+
+async def get_show_aggregate(grouping, **query):
+    async def call_client(client):
+        await init_beanie(database=client.wotb, document_models=[Show])
+        payout = await Show.find(**query).aggregate(
+            [grouping],
+            projection_model=OutputItem
+        ).to_list()
+        return payout[0].value
+    return await mongo_client_wrapper(call_client)
+
+
+async def get_show_with_custom_query(**query):
+    async def call_client(client):
+        await init_beanie(database=client.wotb, document_models=[Show])
+        shows = await Show.find(**query).to_list()
+        if shows.__len__() > 0:
+            return shows[0]
+        return None
     return await mongo_client_wrapper(call_client)
