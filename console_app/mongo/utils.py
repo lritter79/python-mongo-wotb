@@ -94,3 +94,12 @@ async def get_highest_show_payout():
         payout = await Show.find(query).sort("-payout").limit(1).to_list()
         return payout[0].payout
     return await mongo_client_wrapper(call_client)
+
+
+async def add_show(**kwargs):
+    async def call_client(client):
+        await init_beanie(database=client.wotb, document_models=[Show])
+        show = Show(kwargs)
+        doc = await Show.insert_one(show)
+        return doc
+    return await mongo_client_wrapper(call_client)
