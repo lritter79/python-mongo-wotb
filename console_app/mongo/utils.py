@@ -54,7 +54,7 @@ async def get_all_upcoming_shows():
 async def get_all_shows():
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
-        shows = await Show.find_all().to_list()
+        shows = await Show.find(query=None).to_list()
         return shows
     return await mongo_client_wrapper(call_client)
 
@@ -63,7 +63,7 @@ async def get_most_recent_show():
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
         query = {"startTime": {"$lt": datetime.today()}}
-        shows = await Show.find(query).sort("-startTime").limit(1).to_list()
+        shows = await Show.find(query=query, sort=["-startTime"], limit=1).to_list()
         if shows.__len__() > 0:
             return shows[0]
         return None
@@ -112,7 +112,7 @@ async def get_average_show_payout():
 async def add_show(**kwargs):
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
-        show = Show(kwargs)
+        show = Show(**kwargs)
         doc = await Show.insert_one(show)
         return doc
     return await mongo_client_wrapper(call_client)

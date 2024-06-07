@@ -1,6 +1,9 @@
-from email.headerregistry import Address
-from mongo.utils import get_all_upcoming_shows, get_highest_show_payout, get_most_recent_show, get_next_show, get_average_show_payout, get_total_show_payout
+from datetime import datetime
+from classes.address import Address
+from utils.create_show_helper import create_show_with_input
+from mongo.utils import add_show, get_all_upcoming_shows, get_highest_show_payout, get_most_recent_show, get_next_show, get_average_show_payout, get_total_show_payout
 import asyncio
+from pytz import timezone
 
 
 async def main():
@@ -59,41 +62,7 @@ async def main():
             else:
                 print("None payout")
         elif user_input == "7":
-            show_dict = {}
-            show_dict["venueName"] = input("Enter the venue's name\n")
-            timezone = input(
-                "Enter the shows timezone, or press enter if it's in America/NY time\n")
-            if timezone != "":
-                show_dict["timezone"] = timezone
-            fbLink = input(
-                "Enter an FB link if there is one or press enter to skip\n")
-            if fbLink != "":
-                show_dict["fbLink"] = input(fbLink)
-            date = input("Put in the show date as MM/DD/yyyy")
-            date_arr = date.split("/")
-            time = input(
-                "Put in the time in military time (e.g. 23:00 for 11pm)")
-            time_arr = time.split(":")
-            other_bands = input(
-                "Enter any other bands separated with commas opeing/closing")
-            bands_array = other_bands.split(",")
-            show_dict["otherBands"] = bands_array
-            # address: Address
-            venue_name = input(
-                "Enter the venue_name")
-            house_number = input(
-                "Enter the house number")
-            street_name = input(
-                "Enter any street name")
-            city_name = input(
-                "Enter any City name")
-            state_abbr = input(
-                "Enter the state abbr.")
-            # venue = Address(display_name=)
-            # if payout != None:
-            #     print(f"Highest Payout: {payout}")
-            # else:
-            #     print("None payout")
+            await create_show_with_input()
         else:
             print("Pick a valid option")
 
