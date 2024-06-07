@@ -1,12 +1,13 @@
-from datetime import datetime
-from classes.address import Address
+from openai_custom.utils import chatgpt_band_test
 from utils.create_show_helper import create_show_with_input
-from mongo.utils import add_show, get_all_upcoming_shows, get_highest_show_payout, get_most_recent_show, get_next_show, get_average_show_payout, get_total_show_payout
+from mongo.utils import get_average_show_payout_by_state, add_show, get_all_upcoming_shows, get_highest_show_payout, get_most_recent_show, get_next_show, get_average_show_payout, get_total_show_payout
 import asyncio
-from pytz import timezone
+from dotenv import load_dotenv
 
 
 async def main():
+    print(load_dotenv())
+    # print(os.getenv('OPENAI_PROJECT_ID'))
     print('Main')
     run = True
     print("\t**********************************************")
@@ -21,6 +22,8 @@ async def main():
         print("5: Average Show Payout")
         print("6: Highest Show Payout")
         print("7: Add a show")
+        print("8: Get average payout by state")
+        print("9: Test ChatGPT")
         print("q: Quit")
         user_input = input(
             "What would you like to know about Wake of the Blade?\n")
@@ -63,8 +66,14 @@ async def main():
                 print("None payout")
         elif user_input == "7":
             await create_show_with_input()
+        elif user_input == "8":
+            payouts = await get_average_show_payout_by_state()
+            print(payouts)
+        elif user_input == "9":
+            await chatgpt_band_test()
         else:
             print("Pick a valid option")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

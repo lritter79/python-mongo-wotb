@@ -1,3 +1,4 @@
+from bson import json_util
 from pydantic import BaseModel, Field
 from pymongo import errors as pymongo_errors
 from dotenv import load_dotenv
@@ -8,6 +9,7 @@ from beanie import init_beanie
 from classes import Show
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorClient
+from bson.json_util import dumps
 
 
 async def mongo_client_wrapper(func):
@@ -96,15 +98,23 @@ async def get_total_show_payout():
 
 
 async def get_average_show_payout():
+    payout = await ask_database_about_shows({"$group": {"_id": {"$toString": "$_id"}, "value": {"$avg": "$payout"}}}, {"payout": {"$exists": True, "$ne": None}})
+
+    return payout[0].value
+
+
+async def get_average_show_payout_by_state():
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
         query = {"payout": {"$exists": True, "$ne": None}}
         payout = await Show.find(query).aggregate(
-            [{"$group": {"_id": {"$toString": "$_id"}, "value": {"$avg": "$payout"}}}],
+            [{"$group": {"_id": "$address.state", "value": {"$avg": "$payout"}}}],
             projection_model=OutputItem
         ).to_list()
-        return payout[0].value
-    return await mongo_client_wrapper(call_client)
+        return payout
+    avgs = await mongo_client_wrapper(call_client)
+    return dumps(avgs, default=json_util.default)
+
 
 # Insert method
 
@@ -120,22 +130,16 @@ async def add_show(**kwargs):
 # Modular methods
 
 
-async def get_show_aggregate(grouping, **query):
+async def ask_database_about_shows(grouping=None, **query):
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
-        payout = await Show.find(**query).aggregate(
+        if grouping == None:
+            shows = await Show.find(**query).to_list()
+            return shows
+        results = await Show.find(**query).aggregate(
             [grouping],
             projection_model=OutputItem
         ).to_list()
-        return payout[0].value
-    return await mongo_client_wrapper(call_client)
 
-
-async def get_show_with_custom_query(**query):
-    async def call_client(client):
-        await init_beanie(database=client.wotb, document_models=[Show])
-        shows = await Show.find(**query).to_list()
-        if shows.__len__() > 0:
-            return shows[0]
-        return None
+        return results
     return await mongo_client_wrapper(call_client)
