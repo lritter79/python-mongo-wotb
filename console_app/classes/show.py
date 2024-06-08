@@ -14,6 +14,8 @@ class Show(Document):
     entryTime: Optional[datetime] = None,
     otherBands: Optional[List[str]] = []
     payout: Optional[int] = None
+    notes: Optional[str] = None
+    notesEmbedding: Optional[List[float]] = None
 
     class Settings:
         name = "wotb_shows"

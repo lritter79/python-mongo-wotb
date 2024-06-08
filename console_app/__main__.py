@@ -24,6 +24,7 @@ async def main():
         print("7: Add a show")
         print("8: Get average payout by state")
         print("9: Test ChatGPT")
+        print("10: Create vector embeddings for show notes")
         print("q: Quit")
         user_input = input(
             "What would you like to know about Wake of the Blade?\n")

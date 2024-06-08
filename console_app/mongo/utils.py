@@ -1,3 +1,4 @@
+from typing import List
 from bson import json_util
 from pydantic import BaseModel, Field
 from pymongo import errors as pymongo_errors
@@ -33,7 +34,7 @@ async def mongo_client_wrapper(func):
         sys.exit(1)
 
 
-async def get_next_show():
+async def get_next_show() -> Show | None:
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
         query = {"startTime": {"$gt": datetime.today()}}
@@ -44,7 +45,7 @@ async def get_next_show():
     return await mongo_client_wrapper(call_client)
 
 
-async def get_all_upcoming_shows():
+async def get_all_upcoming_shows() -> List[Show]:
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
         query = {"startTime": {"$gt": datetime.today()}}
@@ -53,7 +54,7 @@ async def get_all_upcoming_shows():
     return await mongo_client_wrapper(call_client)
 
 
-async def get_all_shows():
+async def get_all_shows() -> List[Show]:
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
         shows = await Show.find(query=None).to_list()
@@ -127,7 +128,17 @@ async def add_show(**kwargs):
         return doc
     return await mongo_client_wrapper(call_client)
 
-# Modular methods
+# update methods
+
+
+async def add_show_notes_vector_embeddings():
+    shows = await get_all_shows()
+    for show in shows:
+        if show.notes != None and show.notesEmbedding == None:
+            # add embedding logic
+            # Modular methods
+            print("todo")
+    return
 
 
 async def ask_database_about_shows(grouping=None, **query):
