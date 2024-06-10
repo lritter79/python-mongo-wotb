@@ -5,7 +5,7 @@ from tenacity import retry, wait_random_exponential, stop_after_attempt
 from termcolor import colored
 import asyncio
 from classes.show import Show
-from mongo.utils import ask_database_about_shows, get_average_show_payout_by_state
+from mongo.utils import get_average_show_payout_by_state, get_shows, get_all_upcoming_shows
 
 GPT_MODEL = "gpt-4o"
 print(load_dotenv())
@@ -16,41 +16,32 @@ tools = [
     {
         "type": "function",
         "function": {
-            "name": "ask_database_about_shows",
-            "description": "Use this function to answer user questions about shows that the band Wake of the Blade (abbr. as wotb) has done, or will do in the future, as well as aggregate data about shows over time, like the average payout for all shows.",
+            "name": "get_shows",
+            "description": "Use this function to get information about Wake of the Blade shows from the shows mongo db database",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {
-                        "type": "object",
-                        "description": f"""
-                            MongoDB extracting keyword arguments info to answer the user's question.
-                            Example input:
-                            {{
-                                "query":{{"startTime": {{"$lt": datetime.today()}}}},
-                                "sort":["-startTime"],
-                                "limit": 1
-                            }}
-                            These are the properties and their types that you can query against for shows:
-                            {Show.get_properties_and_types()}
-                            """,
-                        "additionalProperties": True
+                    "limit": {
+                        "type": "number",
+                        "description": "Number of shows to return, defaults to 10 if not specified",
                     },
-                    "grouping": {
-                        "type": "object",
-                        "description": f"""Extract an object to use as input for the MongoDB aggregate() function on a query.
-                            You can use this to look for groupings like the number of shows in each state, or the average payout across all shows, or the average payout of shows by state.
-                            Example input:
-                            {{"$group": {{"_id": "$address.state",
-                                "value": {{"$avg": "$payout"}}}}}}
-                            """,
-                        "additionalProperties": True
-                    }
+                    "sort": {"type": "string", "description": "Sets which property of a show document to sort by, defaulting to startTime.", "enum": Show.get_properties()},
+                    "query_property": {"type": "string", "description": "Sets which property of a show document to query the database by, defaulting to none if not specified.", "enum": Show.get_properties()},
+                    "query_comparison_operator": {"type": "string", "description": "Sets the Mongo DB Comparison operator reutring data based on value comparisons. Defaults none", "enum": ["$eq", "$gt", "$gte", "$in", "$lt", "$lte", "$ne", "$nin"]},
+                    "query_property": {"type": "string", "description": "Sets which property of a show document to query the database by, defaulting to none if not specified. Here's a mapping of the show propterties to their types: {Show.get_properties_and_types()}", "enum": Show.get_properties()},
+                    "query_compare_date": {"type:": "datetime", "description": f"Sets the value to compare if the type of query property is date or datetime"},
+                    "query_compare_string": {"type:": "string", "description": f"Sets the value to compare if the type of query property is string"},
+                    "query_compare_number": {"type:": "number", "description": f"Sets the value to compare if the type of query property is number"},
                 },
-                "required": ["query"]
+                "required": []
             }
         }
     },
+    {"type": "function",
+     "function": {
+         "name": "get_all_upcoming_shows",
+         "description": "Gets all Wake of the Blade shows that have not happened yet. The function calls datetime.today() so there's no need to pass in a current date and it doesnt matter what ChatGPT's latest date is."
+     }},
     {
         "type": "function",
         "function": {
@@ -109,7 +100,7 @@ async def chatgpt_band_test():
     # Step #1: Prompt with content that may result in function call. In this case the model can identify the information requested by the user is potentially available in the database schema passed to the model in Tools description.
     messages = [{
         "role": "user",
-        "content": "What is the average payout of Wake of the Blade shows in different states?"
+        "content": "What are the two upcoming Wake of the Blade Shows that have not happened yet?"
     }]
 
     response = client.chat.completions.create(
@@ -160,6 +151,75 @@ async def chatgpt_band_test():
         # print(model_response_with_function_call.choices[0].message.content)
         if tool_function_name == 'get_average_show_payout_by_state':
             results = await get_average_show_payout_by_state()
+
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "name": tool_function_name,
+                "content": json.dumps(results)
+            })
+
+            # Step 4: Invoke the chat completions API with the function response appended to the messages list
+            # Note that messages with role 'function' must be a response to a preceding message with 'tool_calls'
+            model_response_with_function_call = client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+            )  # get a new response from the model where it can see the function response
+            print(model_response_with_function_call.choices[0].message.content)
+
+        if tool_function_name == 'get_all_upcoming_shows':
+            results = await get_all_upcoming_shows()
+
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "name": tool_function_name,
+                "content": json.dumps(results, indent=4, sort_keys=True, default=str)
+            })
+
+            # Step 4: Invoke the chat completions API with the function response appended to the messages list
+            # Note that messages with role 'function' must be a response to a preceding message with 'tool_calls'
+            model_response_with_function_call = client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+            )  # get a new response from the model where it can see the function response
+            print(model_response_with_function_call.choices[0].message.content)
+
+        ####
+        elif tool_function_name == 'get_shows':
+            tool_limit = eval(tool_calls[0].function.arguments)['limit']
+            tool_sort = eval(tool_calls[0].function.arguments)['sort']
+            try:
+                tool_query_property = eval(tool_calls[0].function.arguments)[
+                    'query_property']
+            except KeyError:
+                tool_query_property = None
+            try:
+                tool_query_comparison_operator = eval(tool_calls[0].function.arguments)[
+                    'query_comparison_operator']
+            except KeyError:
+                tool_query_property = None
+            try:
+                tool_query_compare_date = eval(tool_calls[0].function.arguments)[
+                    'query_compare_date']
+            except KeyError:
+                tool_query_compare_date = None
+            try:
+                tool_query_compare_string = eval(tool_calls[0].function.arguments)[
+                    'query_compare_string']
+            except KeyError:
+                tool_query_compare_string = None
+            try:
+                tool_query_compare_number = eval(tool_calls[0].function.arguments)[
+                    'query_compare_number']
+            except KeyError:
+                tool_query_compare_number = None
+
+            results = await get_shows(limit=tool_limit, sort=tool_sort,
+                                      query_compare_date=tool_query_compare_date,
+                                      query_compare_string=tool_query_compare_string,
+                                      query_compare_number=tool_query_compare_number,
+                                      query_comparison_operator=tool_query_comparison_operator, query_property=tool_query_property)
 
             messages.append({
                 "role": "tool",

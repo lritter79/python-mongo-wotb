@@ -27,3 +27,11 @@ class Show(Document):
         for prop, prop_type in properties.items():
             result.append(f"{prop}: {prop_type}")
         return "\n".join(result)
+
+    @staticmethod
+    def get_properties() -> list[str]:
+        properties = get_type_hints(Show)
+        result = []
+        for prop, prop_type in properties.items():
+            result.append(f"{prop}")
+        return result

@@ -34,7 +34,31 @@ async def mongo_client_wrapper(func):
         sys.exit(1)
 
 
-async def get_next_show() -> Show | None:
+async def get_shows(limit=10, sort="startTime", query_property=None, query_comparison_operator=None, query_compare_date=None, query_compare_string=None, query_compare_number=None):
+    async def call_client(client):
+        await init_beanie(database=client.wotb, document_models=[Show])
+        shows = []
+        if query_property != None and query_comparison_operator != None:
+            query = {}
+            if query_compare_date != None:
+                query = {query_property: {
+                    query_comparison_operator: query_compare_date}}
+            elif query_compare_string != None:
+                query = {query_property: {
+                    query_comparison_operator: query_compare_string}}
+            elif query_compare_number != None:
+                query = {query_property: {
+                    query_comparison_operator: query_compare_number}}
+            shows = await Show.find(query).sort(sort).limit(limit).to_list()
+        else:
+            shows = await Show.find_many().sort(sort).limit(limit).to_list()
+        if shows.__len__() > 0:
+            return shows[0]
+        return None
+    return await mongo_client_wrapper(call_client)
+
+
+async def get_next_show():
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
         query = {"startTime": {"$gt": datetime.today()}}
