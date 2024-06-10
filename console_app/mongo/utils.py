@@ -11,6 +11,7 @@ from classes import Show
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson.json_util import dumps
+from hugging_face.utils import generate_embedding
 
 
 async def mongo_client_wrapper(func):
@@ -113,6 +114,22 @@ class OutputItem(BaseModel):
     value: float
 
 
+async def get_semantic_notes_search(search_string):
+    async def call_client(client):
+        await init_beanie(database=client.wotb, document_models=[Show])
+        query = {"$vectorSearch": {
+            "queryVector": generate_embedding(search_string),
+            "path": "notesEmbedding",
+            "numCandidates": 100,
+            "limit": 4,
+            "index": "NotesSemanticSearch",
+        }
+        }
+        shows = await Show.find(query).sum(Show.payout)
+        return shows
+    return await mongo_client_wrapper(call_client)
+
+
 async def get_total_show_payout():
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
@@ -156,13 +173,12 @@ async def add_show(**kwargs):
 
 
 async def add_show_notes_vector_embeddings():
-    shows = await get_all_shows()
-    for show in shows:
-        if show.notes != None and show.notesEmbedding == None:
-            # add embedding logic
-            # Modular methods
-            print("todo")
-    return
+    async def call_client(client):
+        await init_beanie(database=client.wotb, document_models=[Show])
+        show = await Show.find_one({'notesEmbedding': {"$exists": False}})
+        embedding = generate_embedding(show.notes)
+        await show.set({Show.notesEmbedding: embedding})
+    return await mongo_client_wrapper(call_client)
 
 
 async def ask_database_about_shows(grouping=None, **query):

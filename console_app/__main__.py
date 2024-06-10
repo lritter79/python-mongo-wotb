@@ -1,6 +1,6 @@
 from openai_custom.utils import chatgpt_band_test
-from utils.create_show_helper import create_show_with_input
-from mongo.utils import get_average_show_payout_by_state, add_show, get_all_upcoming_shows, get_highest_show_payout, get_most_recent_show, get_next_show, get_average_show_payout, get_total_show_payout
+from cli_helpers.create_show_helper import create_show_with_input
+from mongo.utils import add_show_notes_vector_embeddings, get_average_show_payout_by_state,  get_all_upcoming_shows, get_highest_show_payout, get_most_recent_show, get_next_show, get_average_show_payout, get_semantic_notes_search, get_total_show_payout
 import asyncio
 from dotenv import load_dotenv
 
@@ -72,6 +72,12 @@ async def main():
             print(payouts)
         elif user_input == "9":
             await chatgpt_band_test()
+        elif user_input == "10":
+            res = await add_show_notes_vector_embeddings()
+            print(res)
+        elif user_input == "11":
+            res = await get_semantic_notes_search("Generally positive outcome")
+            print(res)
         else:
             print("Pick a valid option")
 
