@@ -1,42 +1,43 @@
 import json
 from dotenv import load_dotenv
-from openai import OpenAI
+# from openai import OpenAI
+import openai
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 from termcolor import colored
 import asyncio
 from classes.show import Show
 from mongo.utils import get_average_show_payout_by_state, get_shows, get_all_upcoming_shows
 
-GPT_MODEL = "gpt-4o"
+GPT_MODEL = "phi-2.Q2_K"
 print(load_dotenv())
 
-client = OpenAI()
+# client = OpenAI()
 
 tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "get_shows",
-            "description": "Use this function to get information about Wake of the Blade shows from the shows mongo db database",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "limit": {
-                        "type": "number",
-                        "description": "Number of shows to return, defaults to 10 if not specified",
-                    },
-                    "sort": {"type": "string", "description": "Sets which property of a show document to sort by, defaulting to startTime.", "enum": Show.get_properties()},
-                    "query_property": {"type": "string", "description": "Sets which property of a show document to query the database by, defaulting to none if not specified.", "enum": Show.get_properties()},
-                    "query_comparison_operator": {"type": "string", "description": "Sets the Mongo DB Comparison operator reutring data based on value comparisons. Defaults none", "enum": ["$eq", "$gt", "$gte", "$in", "$lt", "$lte", "$ne", "$nin"]},
-                    "query_property": {"type": "string", "description": "Sets which property of a show document to query the database by, defaulting to none if not specified. Here's a mapping of the show propterties to their types: {Show.get_properties_and_types()}", "enum": Show.get_properties()},
-                    "query_compare_date": {"type:": "datetime", "description": f"Sets the value to compare if the type of query property is date or datetime"},
-                    "query_compare_string": {"type:": "string", "description": f"Sets the value to compare if the type of query property is string"},
-                    "query_compare_number": {"type:": "number", "description": f"Sets the value to compare if the type of query property is number"},
-                },
-                "required": []
-            }
-        }
-    },
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "get_shows",
+    #         "description": "Use this function to get information about Wake of the Blade shows from the shows mongo db database",
+    #         "parameters": {
+    #             "type": "object",
+    #             "properties": {
+    #                 "limit": {
+    #                     "type": "number",
+    #                     "description": "Number of shows to return, defaults to 10 if not specified",
+    #                 },
+    #                 "sort": {"type": "string", "description": "Sets which property of a show document to sort by, defaulting to startTime.", "enum": Show.get_properties()},
+    #                 "query_property": {"type": "string", "description": "Sets which property of a show document to query the database by, defaulting to none if not specified.", "enum": Show.get_properties()},
+    #                 "query_comparison_operator": {"type": "string", "description": "Sets the Mongo DB Comparison operator reutring data based on value comparisons. Defaults none", "enum": ["$eq", "$gt", "$gte", "$in", "$lt", "$lte", "$ne", "$nin"]},
+    #                 "query_property": {"type": "string", "description": "Sets which property of a show document to query the database by, defaulting to none if not specified. Here's a mapping of the show propterties to their types: {Show.get_properties_and_types()}", "enum": Show.get_properties()},
+    #                 #                    "query_compare_date": {"type:": "string", "description": f"Sets the value to compare if the type of query property is date or datetime"},
+    #                 "query_compare_string": {"type:": "string", "description": f"Sets the value to compare if the type of query property is string"},
+    #                 "query_compare_number": {"type:": "number", "description": f"Sets the value to compare if the type of query property is number"},
+    #             },
+    #             "required": []
+    #         }
+    #     }
+    # },
     {"type": "function",
      "function": {
          "name": "get_all_upcoming_shows",
@@ -53,10 +54,10 @@ tools = [
 ]
 
 
-@retry(wait=wait_random_exponential(multiplier=1, max=40), stop=stop_after_attempt(3))
+@ retry(wait=wait_random_exponential(multiplier=1, max=40), stop=stop_after_attempt(3))
 def chat_completion_request(messages, tools=None, tool_choice=None, model=GPT_MODEL):
     try:
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model=model,
             messages=messages,
             tools=tools,
@@ -103,8 +104,8 @@ async def chatgpt_band_test():
         "content": "What are the two upcoming Wake of the Blade Shows that have not happened yet?"
     }]
 
-    response = client.chat.completions.create(
-        model='gpt-4o',
+    response = openai.ChatCompletion.create(
+        model=GPT_MODEL,
         messages=messages,
         tools=tools,
         tool_choice="auto"
@@ -144,8 +145,8 @@ async def chatgpt_band_test():
 
         # # Step 4: Invoke the chat completions API with the function response appended to the messages list
         # # Note that messages with role 'function' must be a response to a preceding message with 'tool_calls'
-        # model_response_with_function_call = client.chat.completions.create(
-        #     model="gpt-4o",
+        # model_response_with_function_call = openai.ChatCompletion.create(
+        #     model=GPT_MODEL,
         #     messages=messages,
         # )  # get a new response from the model where it can see the function response
         # print(model_response_with_function_call.choices[0].message.content)
@@ -161,8 +162,8 @@ async def chatgpt_band_test():
 
             # Step 4: Invoke the chat completions API with the function response appended to the messages list
             # Note that messages with role 'function' must be a response to a preceding message with 'tool_calls'
-            model_response_with_function_call = client.chat.completions.create(
-                model="gpt-4o",
+            model_response_with_function_call = openai.ChatCompletion.create(
+                model=GPT_MODEL,
                 messages=messages,
             )  # get a new response from the model where it can see the function response
             print(model_response_with_function_call.choices[0].message.content)
@@ -179,8 +180,8 @@ async def chatgpt_band_test():
 
             # Step 4: Invoke the chat completions API with the function response appended to the messages list
             # Note that messages with role 'function' must be a response to a preceding message with 'tool_calls'
-            model_response_with_function_call = client.chat.completions.create(
-                model="gpt-4o",
+            model_response_with_function_call = openai.ChatCompletion.create(
+                model=GPT_MODEL,
                 messages=messages,
             )  # get a new response from the model where it can see the function response
             print(model_response_with_function_call.choices[0].message.content)
@@ -230,8 +231,8 @@ async def chatgpt_band_test():
 
             # Step 4: Invoke the chat completions API with the function response appended to the messages list
             # Note that messages with role 'function' must be a response to a preceding message with 'tool_calls'
-            model_response_with_function_call = client.chat.completions.create(
-                model="gpt-4o",
+            model_response_with_function_call = openai.ChatCompletion.create(
+                model=GPT_MODEL,
                 messages=messages,
             )  # get a new response from the model where it can see the function response
             print(model_response_with_function_call.choices[0].message.content)
