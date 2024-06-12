@@ -1,0 +1,1 @@
+This is a a python CLI that I made to practice learning Python3 and working with NoSQL databases. It uses an ORM for MongoDB with Python called Beanie. I also used the OpenAI API so the user can ask questions about the band. Hopefully I can make a chatbot for it sometime.  
