@@ -5,7 +5,7 @@ from tenacity import retry, wait_random_exponential, stop_after_attempt
 from termcolor import colored
 import asyncio
 from classes.show import Show
-from mongo.utils import get_average_show_payout_by_state, get_shows, get_all_upcoming_shows
+from mongo.utils import get_average_show_payout_by_state, get_highest_show_payout, get_shows, get_all_upcoming_shows
 
 GPT_MODEL = "gpt-4o"
 print(load_dotenv())
@@ -47,6 +47,13 @@ tools = [
         "function": {
             "name": "get_average_show_payout_by_state",
             "description:": "Returns the average payout of all shows grouped by state the show took place in"
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_highest_show_payout",
+            "description:": "Returns the show with the highest payout"
         }
     }
 
@@ -95,13 +102,15 @@ def pretty_print_conversation(messages):
                 f"function ({message['name']}): {message['content']}\n", role_to_color[message["role"]]))
 
 
-async def chatgpt_band_test():
+async def chatgpt_band_test(content="What is the average payout for a Wake of the Blade show?"):
     print("test")
     # Step #1: Prompt with content that may result in function call. In this case the model can identify the information requested by the user is potentially available in the database schema passed to the model in Tools description.
-    messages = [{
-        "role": "user",
-        "content": "What are the two upcoming Wake of the Blade Shows that have not happened yet?"
-    }]
+    messages = [
+        {"role": "system", "content": "You are an assistant helping a user with Wake of the Blade show data, but you're also rude, edgy, and a metalhead."},
+        {
+            "role": "user",
+                    "content": content
+        }]
 
     response = client.chat.completions.create(
         model='gpt-4o',
@@ -165,9 +174,27 @@ async def chatgpt_band_test():
                 model="gpt-4o",
                 messages=messages,
             )  # get a new response from the model where it can see the function response
+            print("Average Show Payout by State")
             print(model_response_with_function_call.choices[0].message.content)
+            return
+        elif tool_function_name == 'get_highest_show_payout':
+            results = await get_highest_show_payout()
 
-        if tool_function_name == 'get_all_upcoming_shows':
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "name": tool_function_name,
+                "content": json.dumps(results)
+            })
+
+            # Step 4: Invoke the chat completions API with the function response appended to the messages list
+            # Note that messages with role 'function' must be a response to a preceding message with 'tool_calls'
+            model_response_with_function_call = client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+            )
+            print(model_response_with_function_call.choices[0].message.content)
+        elif tool_function_name == 'get_all_upcoming_shows':
             results = await get_all_upcoming_shows()
 
             messages.append({
@@ -184,16 +211,25 @@ async def chatgpt_band_test():
                 messages=messages,
             )  # get a new response from the model where it can see the function response
             print(model_response_with_function_call.choices[0].message.content)
-
+            return
         ####
         elif tool_function_name == 'get_shows':
-            tool_limit = eval(tool_calls[0].function.arguments)['limit']
-            tool_sort = eval(tool_calls[0].function.arguments)['sort']
+            tool_limit = 100
+            try:
+                tool_limit = eval(tool_calls[0].function.arguments)['limit']
+            except KeyError:
+                tool_query_property = None
+            tool_sort = "startTime"
+            try:
+                tool_sort = eval(tool_calls[0].function.arguments)['sort']
+            except KeyError:
+                tool_query_property = None
             try:
                 tool_query_property = eval(tool_calls[0].function.arguments)[
                     'query_property']
             except KeyError:
                 tool_query_property = None
+            tool_query_comparison_operator = None
             try:
                 tool_query_comparison_operator = eval(tool_calls[0].function.arguments)[
                     'query_comparison_operator']
@@ -220,12 +256,13 @@ async def chatgpt_band_test():
                                       query_compare_string=tool_query_compare_string,
                                       query_compare_number=tool_query_compare_number,
                                       query_comparison_operator=tool_query_comparison_operator, query_property=tool_query_property)
+            print(f"Results: {results}")
 
             messages.append({
                 "role": "tool",
                 "tool_call_id": tool_call_id,
                 "name": tool_function_name,
-                "content": json.dumps(results)
+                "content": json.dumps(results, indent=4, sort_keys=True, default=str)
             })
 
             # Step 4: Invoke the chat completions API with the function response appended to the messages list
@@ -235,6 +272,7 @@ async def chatgpt_band_test():
                 messages=messages,
             )  # get a new response from the model where it can see the function response
             print(model_response_with_function_call.choices[0].message.content)
+            return
         else:
             print(f"Error: function {tool_function_name} does not exist")
     else:

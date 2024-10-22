@@ -71,7 +71,9 @@ async def main():
             payouts = await get_average_show_payout_by_state()
             print(payouts)
         elif user_input == "9":
-            await chatgpt_band_test()
+            user_input_chat_gpt = input(
+                "Ask something based on the options from before that ChatGPT could figure out based on the show data in the Wake of the Blade Database \n")
+            await chatgpt_band_test(user_input_chat_gpt)
         elif user_input == "10":
             res = await add_show_notes_vector_embeddings()
             print(res)

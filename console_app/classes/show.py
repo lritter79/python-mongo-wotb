@@ -17,6 +17,23 @@ class Show(Document):
     notes: Optional[str] = None
     notesEmbedding: Optional[List[float]] = None
 
+    def to_dict(self):
+        """Convert the Show object to a dictionary for serialization."""
+        return {
+            "venueName": self.venueName,
+            "timezone": self.timezone,
+            "fbLink": self.fbLink,
+            # Assuming Address class has a to_dict method
+            "address": self.address.to_dict() if self.address else None,
+            "startTime": self.startTime.isoformat() if self.startTime else None,
+            "endTime": self.endTime.isoformat() if self.endTime else None,
+            "entryTime": self.entryTime.isoformat() if self.entryTime else None,
+            "otherBands": self.otherBands,
+            "payout": self.payout,
+            "notes": self.notes,
+            "notesEmbedding": self.notesEmbedding
+        }
+
     class Settings:
         name = "wotb_shows"
 
