@@ -90,8 +90,7 @@ async def get_all_shows() -> List[Show]:
 async def get_most_recent_show():
     async def call_client(client):
         await init_beanie(database=client.wotb, document_models=[Show])
-        query = {"startTime": {"$lt": datetime.today()}}
-        shows = await Show.find(query=query, sort=["-startTime"], limit=1).to_list()
+        shows = await Show.find({"startTime": {"$lt": datetime.today()}}, sort=["-startTime"], limit=1).to_list()
         if shows.__len__() > 0:
             return shows[0]
         return None
