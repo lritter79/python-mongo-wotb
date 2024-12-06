@@ -4,12 +4,16 @@
 ## Table of Contents
 
 - [Overview](#overview)
-- [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Contributing](#contributing)
 - [License](#license)
+
+## Overview
+
+- A practice project I put together to make a RAG app to query the MongoDB database I made to keep track of gigs for my old band with NLP to query via the command line.
+
 
 ## Installation
 
