@@ -1,15 +1,5 @@
 # wotb-chatbot
 
-## Overview
-
-This porjects is a
-
-### Features
-
-- **Asynchronous MongoDB operations** using Motor.
-- **OpenAI GPT integration** for enhanced conversation capabilities.
-- **Customizable prompts** for various use cases.
-- **Built-in error handling** for robust production usage.
 
 ## Table of Contents
 
